@@ -12,116 +12,87 @@ public class SpaceGamePanel extends JPanel implements Runnable {
     private Rectangle goal;
 
     private Thread gameThread;
-    private boolean isRunning = false;
+    private volatile boolean isRunning = false;
     private boolean isPaused = false;
     private boolean up, down, left, right;
-    private boolean hasStartedMoving = false;
+    private boolean hasStartedMoving = false; // המשתנה שדואג שהמשחק ימתין ללחיצה
+
     private int timeLeft;
     private int frameCounter = 0;
     private int currentLevel = 1;
-    private final int MAX_LEVELS = 50;
     private int lives = 3;
-    // משתנה חדש לניהול מצב המשחק (1-רגיל, 2-אקראי, 3-בחירת שלב)
     private int gameMode = 1;
 
     public SpaceGamePanel() {
-        this.setLayout(null);
         this.setBackground(Color.BLACK);
         this.setFocusable(true);
-        setupSkipButton();
         setupKeyListener();
     }
 
-    public void setGameMode(int mode) {
-        this.gameMode = mode;
-    }
-
-    private void setupSkipButton() {
-        JButton skipBtn = new JButton("Level 50 (Cheat)");
-        skipBtn.setBounds(10, 510, 140, 30);
-        skipBtn.setFocusable(false);
-        skipBtn.addActionListener(e -> {
-            currentLevel = 50;
-            initLevel(currentLevel);
-        });
-        this.add(skipBtn);
-    }
+    public void setGameMode(int mode) { this.gameMode = mode; }
 
     private void initLevel(int level) {
-        resetPosition();
-        player = new Player(50, 50);
-        goal = new Rectangle(720, 500, 40, 40);
+        player = new Player(30, 40);
+        goal = new Rectangle(740, 510, 40, 40); // היעד ממוקם בפינה למטה
         Random rand = new Random();
-        int wallCount = 2 + (level / 15);
+
+        int wallCount = 2 + (level / 12);
         mazeWalls = new Wall[wallCount * 2];
 
+        // תיקון המבוך: הגבלנו את הטווח המקסימלי כדי שלא יסתיר את היעד הירוק!
         if (level % 2 != 0) {
-            int startX = 160;
-            int sliceWidth = (650 - startX) / Math.max(1, wallCount);
+            int segment = 580 / wallCount;
             for (int i = 0; i < wallCount; i++) {
-                int x = startX + (i * sliceWidth) + rand.nextInt(Math.max(1, sliceWidth - 40));
-                // תיקון: הבטחת מרווח מינימלי של 50 פיקסלים לעבירות
-                int gapSize = 50 + rand.nextInt(Math.max(1, 150 - (level * 2)));
-                int gapStart = 50 + rand.nextInt(Math.max(1, 500 - gapSize));
-                mazeWalls[i * 2] = new Wall(x, 0, 30, gapStart);
-                mazeWalls[i * 2 + 1] = new Wall(x, gapStart + gapSize, 30, 600 - (gapStart + gapSize));
+                int x = 120 + (i * segment); // ה-X המקסימלי יעצור הרבה לפני היעד
+                int gap = 90 + rand.nextInt(100);
+                int gapY = 50 + rand.nextInt(350);
+                mazeWalls[i * 2] = new Wall(x, 0, 25, gapY);
+                mazeWalls[i * 2 + 1] = new Wall(x, gapY + gap, 25, 600);
             }
         } else {
-            int startY = 150;
-            int sliceHeight = (450 - startY) / Math.max(1, wallCount);
+            int segment = 380 / wallCount; // הגבלנו את ה-Y כדי שהקירות לא ירדו למטה מדי
             for (int i = 0; i < wallCount; i++) {
-                int y = startY + (i * sliceHeight) + rand.nextInt(Math.max(1, sliceHeight - 40));
-                // תיקון: הבטחת מרווח מינימלי של 50 פיקסלים לעבירות
-                int gapSize = 50 + rand.nextInt(Math.max(1, 150 - (level * 2)));
-                int gapStart = 100 + rand.nextInt(Math.max(1, 600 - gapSize));
-                mazeWalls[i * 2] = new Wall(0, y, gapStart, 30);
-                mazeWalls[i * 2 + 1] = new Wall(gapStart + gapSize, y, 800 - (gapStart + gapSize), 30);
+                int y = 100 + (i * segment);
+                int gap = 90 + rand.nextInt(100);
+                int gapX = 150 + rand.nextInt(400);
+                mazeWalls[i * 2] = new Wall(0, y, gapX, 25);
+                mazeWalls[i * 2 + 1] = new Wall(gapX + gap, y, 800, 25);
             }
         }
 
-        int asteroidNum = 1 + (level / 7);
-        asteroids = new Asteroid[asteroidNum];
-        for (int i = 0; i < asteroidNum; i++) {
-            int ax, ay;
-            do {
-                ax = 200 + rand.nextInt(500);
-                ay = rand.nextInt(450);
-            } while (ax < 150 && ay < 150);
-            // תיקון קל: האטה קלה של המהירות המקסימלית (חלוקה ב-15 במקום ב-12)
+        int astCount = 1 + (level / 10);
+        asteroids = new Asteroid[astCount];
+        for (int i = 0; i < astCount; i++) {
             int speed = 2 + (level / 15);
-            asteroids[i] = new Asteroid(ax, ay, 30, 30, rand.nextBoolean() ? speed : -speed, rand.nextBoolean() ? speed : -speed);
+            asteroids[i] = new Asteroid(200 + rand.nextInt(400), 100 + rand.nextInt(300), 25, 25, speed, speed);
         }
+
+        timeLeft = 15 + (level * 45 / 50);
+        up = down = left = right = false;
+        hasStartedMoving = false; // מאפס את הדגל כך שהמשחק ימתין למשתמש
     }
 
     public void startGame() {
         if (gameMode == 1) {
             currentLevel = 1;
         } else if (gameMode == 2) {
-            currentLevel = new Random().nextInt(MAX_LEVELS) + 1;
+            currentLevel = new Random().nextInt(50) + 1;
         } else if (gameMode == 3) {
-            String input = JOptionPane.showInputDialog(this, "בחר שלב (1-" + MAX_LEVELS + "):");
+            String val = JOptionPane.showInputDialog(null, "אנא הקלד מספר שלב (1-50):", "בחירת שלב ידנית", JOptionPane.QUESTION_MESSAGE);
             try {
-                if (input != null) {
-                    int selectedLevel = Integer.parseInt(input);
-                    if (selectedLevel < 1) {
-                        currentLevel = 1;
-                        JOptionPane.showMessageDialog(this, "שלב לא תקין, מתחיל משלב 1");
-                    } else if (selectedLevel > MAX_LEVELS) {
-                        currentLevel = MAX_LEVELS;
-                        JOptionPane.showMessageDialog(this, "השלב המקסימלי הוא " + MAX_LEVELS + ". עובר לשלב האחרון.");
-                    } else {
-                        currentLevel = selectedLevel;
-                    }
+                if (val != null && !val.trim().isEmpty()) {
+                    currentLevel = Math.max(1, Math.min(50, Integer.parseInt(val)));
                 } else {
-                    return; // לחיצה על Cancel
+                    currentLevel = 1;
                 }
             } catch (NumberFormatException e) {
                 currentLevel = 1;
-                JOptionPane.showMessageDialog(this, "נא להזין מספר בלבד. מתחיל משלב 1.");
             }
         }
-        initLevel(currentLevel);
+
         lives = 3;
+        initLevel(currentLevel);
+
         if (gameThread == null || !isRunning) {
             isRunning = true;
             gameThread = new Thread(this);
@@ -132,104 +103,106 @@ public class SpaceGamePanel extends JPanel implements Runnable {
     @Override
     public void run() {
         while (isRunning) {
-            if (!isPaused) updateGame();
-            SwingUtilities.invokeLater(this::repaint);
-            try { Thread.sleep(16); } catch (InterruptedException e) { break; }
+            if (!isPaused) update();
+            repaint();
+            try { Thread.sleep(16); } catch (InterruptedException e) {}
         }
     }
 
-    private void updateGame() {
-        if (getWidth() <= 0) return;
-        if (!hasStartedMoving && (up || down || left || right)) hasStartedMoving = true;
+    private void update() {
+        // בודק אם השחקן לחץ על חץ כדי להתחיל להזיז את המשחק
+        if (!hasStartedMoving && (up || down || left || right)) {
+            hasStartedMoving = true;
+        }
+
         int nx = player.getX(), ny = player.getY();
         if (up) ny -= 5; if (down) ny += 5; if (left) nx -= 5; if (right) nx += 5;
-        if (nx < 0) nx = 0; if (ny < 0) ny = 0;
-        if (nx > getWidth() - player.getWidth()) nx = getWidth() - player.getWidth();
-        if (ny > getHeight() - player.getHeight()) ny = getHeight() - player.getHeight();
-        Rectangle nextPos = new Rectangle(nx, ny, player.getWidth(), player.getHeight());
 
-        if (nextPos.intersects(goal)) {
-            if (currentLevel < MAX_LEVELS) {
-                currentLevel++;
-                JOptionPane.showMessageDialog(this, "שלב " + (currentLevel - 1) + " הושלם!");
-                initLevel(currentLevel);
-                return;
-            } else {
-                JOptionPane.showMessageDialog(this, "ניצחת במשחק!");
-                isRunning = false;
-                System.exit(0);
-            }
+        Rectangle next = new Rectangle(nx, ny, player.getWidth(), player.getHeight());
+        boolean hit = false;
+        for (Wall w : mazeWalls) if (w != null && next.intersects(w.getBounds())) hit = true;
+
+        if (!hit) {
+            player.setX(Math.max(0, Math.min(760, nx)));
+            player.setY(Math.max(30, Math.min(560, ny)));
         }
-        boolean canMove = true;
-        for (int i = 0; i < mazeWalls.length; i++) {
-            if (nextPos.intersects(mazeWalls[i].getBounds())) {
-                canMove = false;
-                break;
-            }
-        }
+
+        // האסטרואידים והזמן פועלים *רק* אם השחקן התחיל לזוז
         if (hasStartedMoving) {
+            for (Asteroid a : asteroids) {
+                if (a != null) {
+                    a.move();
+                    if (a.getX() < 0 || a.getX() > 770) a.reverseX();
+                    if (a.getY() < 30 || a.getY() > 570) a.reverseY();
+                    if (next.intersects(a.getBounds())) { handleDeath("נפגעת מאסטרואיד!"); return; }
+                }
+            }
+
             frameCounter++;
             if (frameCounter >= 60) {
                 timeLeft--; frameCounter = 0;
-                if (timeLeft <= 0) { handlePlayerHit("נגמר הזמן!"); return; }
-            }
-            for (int i = 0; i < asteroids.length; i++) {
-                Asteroid a = asteroids[i];
-                a.move();
-                if (a.getX() < 0 || a.getX() > getWidth() - a.getWidth()) a.reverseX();
-                if (a.getY() < 0 || a.getY() > getHeight() - a.getHeight()) a.reverseY();
-                if (nextPos.intersects(a.getBounds())) {
-                    handlePlayerHit("נפגעת!");
-                    canMove = false;
-                }
+                if (timeLeft <= 0) handleDeath("נגמר הזמן!");
             }
         }
 
-        if (canMove) { player.setX(nx); player.setY(ny); }
+        if (next.intersects(goal)) {
+            if (currentLevel < 50) {
+                currentLevel++;
+                initLevel(currentLevel);
+            } else {
+                JOptionPane.showMessageDialog(null, "כל הכבוד! ניצחת במשחק!");
+                System.exit(0);
+            }
+        }
     }
 
-    private void handlePlayerHit(String reason) {
+    // פונקציית הפסילה החדשה שמקבלת את סיבת המוות ומציגה אותה עם החיים שנותרו
+    private void handleDeath(String reason) {
         lives--;
+        up = down = left = right = false; // איפוס מקשים כדי למנוע תזוזה מקרית
+
         if (lives <= 0) {
-            isRunning = false;
-            JOptionPane.showMessageDialog(this, "המשחק נגמר!");
+            JOptionPane.showMessageDialog(null, reason + "\nהמשחק נגמר! לא נותרו לך חיים.");
             System.exit(0);
         } else {
-            JOptionPane.showMessageDialog(this, reason + "\nחיים נותרים: " + lives);
-            resetPosition();
+            JOptionPane.showMessageDialog(null, reason + "\nנותרו לך " + lives + " חיים.\nלחץ OK ואז על אחד החצים כדי להמשיך.");
+            initLevel(currentLevel);
         }
-    }
-
-    private void resetPosition() {
-        if (player != null) { player.setX(50); player.setY(50); }
-        up = false; down = false; left = false; right = false;
-        hasStartedMoving = false;
-        timeLeft = 15 + ((currentLevel - 1) * 45 / 49);
     }
 
     @Override
     protected void paintComponent(Graphics g) {
         super.paintComponent(g);
-        if (goal == null || player == null) return;
-        g.setColor(Color.WHITE);
-        g.setFont(new Font("Arial", Font.BOLD, 14));
-        g.drawString("Level: " + currentLevel + " | Lives: " + lives + " | Time: " + timeLeft, 10, 25);
+
         g.setColor(Color.GREEN);
         g.fillRect(goal.x, goal.y, goal.width, goal.height);
-        if (mazeWalls != null) {
-            for (int i = 0; i < mazeWalls.length; i++) {
-                if (mazeWalls[i] != null) mazeWalls[i].draw(g);
-            }
-        }
-        if (asteroids != null) {
-            for (int i = 0; i < asteroids.length; i++) {
-                if (asteroids[i] != null) asteroids[i].draw(g);
-            }
-        }
+
+        for (Wall w : mazeWalls) if (w != null) w.draw(g);
+        for (Asteroid a : asteroids) if (a != null) a.draw(g);
+
         player.draw(g);
+
+        g.setColor(Color.BLACK);
+        g.fillRect(0, 0, 800, 30);
+
+        g.setColor(Color.DARK_GRAY);
+        g.drawLine(0, 30, 800, 30);
+
+        g.setColor(Color.WHITE);
+        g.setFont(new Font("Arial", Font.BOLD, 16));
+        g.drawString("Level: " + currentLevel + " | Lives: " + lives + " | Time: " + timeLeft, 20, 21);
+
+        // כיתוב שמנחה את השחקן להתחיל לנוע
+        if (!hasStartedMoving && !isPaused) {
+            g.setColor(Color.YELLOW);
+            g.setFont(new Font("Arial", Font.BOLD, 24));
+            g.drawString("לחץ על אחד החצים כדי להתחיל!", 220, 280);
+        }
+
         if (isPaused) {
             g.setColor(Color.YELLOW);
-            g.drawString("PAUSED", getWidth()/2 - 20, getHeight()/2);
+            g.setFont(new Font("Arial", Font.BOLD, 40));
+            g.drawString("PAUSED", 320, 300);
         }
     }
 
@@ -238,11 +211,12 @@ public class SpaceGamePanel extends JPanel implements Runnable {
             public void keyPressed(KeyEvent e) {
                 int c = e.getKeyCode();
                 if (c == KeyEvent.VK_P) isPaused = !isPaused;
-                if (isPaused) return;
-                if (c == KeyEvent.VK_UP) up = true;
-                if (c == KeyEvent.VK_DOWN) down = true;
-                if (c == KeyEvent.VK_LEFT) left = true;
-                if (c == KeyEvent.VK_RIGHT) right = true;
+                if (!isPaused) {
+                    if (c == KeyEvent.VK_UP) up = true;
+                    if (c == KeyEvent.VK_DOWN) down = true;
+                    if (c == KeyEvent.VK_LEFT) left = true;
+                    if (c == KeyEvent.VK_RIGHT) right = true;
+                }
             }
             public void keyReleased(KeyEvent e) {
                 int c = e.getKeyCode();

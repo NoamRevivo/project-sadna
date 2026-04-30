@@ -1,6 +1,8 @@
 package org.example;
+
 import javax.swing.*;
 import java.awt.*;
+
 public class SpaceMaze extends JFrame {
     public SpaceMaze() {
         this.setTitle("Space Maze - Final Project");
@@ -11,18 +13,20 @@ public class SpaceMaze extends JFrame {
         CardLayout cl = new CardLayout();
         JPanel container = new JPanel(cl);
         SpaceGamePanel game = new SpaceGamePanel();
-        // יצירת התפריט והגדרת הפעולה בהתאם לבחירת מצב ע"י משתמש
+        // הגדרת התפריט והפעולה בלחיצה על מצב משחק
         MenuPanel menu = new MenuPanel(mode -> {
-            game.setGameMode(mode); // עדכון המצב בתוך המשחק
-            cl.show(container, "Game"); // מעבר למסך המשחק
-            game.startGame(); // התחלת המשחק לפי המצב שנבחר
+            game.setGameMode(mode);
+            cl.show(container, "Game");
+            game.startGame();
             game.requestFocusInWindow();
         });
+
         container.add(menu, "Menu");
         container.add(game, "Game");
         this.add(container);
         this.setVisible(true);
     }
+
     public static void main(String[] args) {
         SwingUtilities.invokeLater(SpaceMaze::new);
     }

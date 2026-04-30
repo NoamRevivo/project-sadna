@@ -1,6 +1,7 @@
 package org.example;
+
 import java.awt.*;
-//מחלקה אבסטראקטית שמכילה את כל הערכים המשותפים לכל אובייקט במשחק
+
 public abstract class SpaceObject {
     protected int x, y, width, height;
     protected Color color;
@@ -12,7 +13,6 @@ public abstract class SpaceObject {
         this.height = height;
         this.color = color;
     }
-
     public int getX() { return x; }
     public void setX(int x) { this.x = x; }
     public int getY() { return y; }
