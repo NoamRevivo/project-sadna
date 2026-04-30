@@ -9,9 +9,9 @@ public class MenuPanel extends JPanel {
     private JButton modeButton, langButton;
     private boolean isHebrew = true;
 
-    // Interface לשליחת המידע למשחק
+    // ה-Interface המעודכן שמקבל גם שפה
     public interface GameModeListener {
-        void onModeSelected(int mode);
+        void onModeSelected(int mode, boolean isHebrew);
     }
     private GameModeListener listener;
 
@@ -38,7 +38,6 @@ public class MenuPanel extends JPanel {
         top.add(titleLabel);
         top.add(authorLabel);
 
-        // יצירת חלונית ההוראות[cite: 1]
         instructionsArea = new JTextArea();
         instructionsArea.setEditable(false);
         instructionsArea.setBackground(new Color(20, 20, 60));
@@ -77,10 +76,11 @@ public class MenuPanel extends JPanel {
                 JOptionPane.DEFAULT_OPTION, JOptionPane.PLAIN_MESSAGE, null, options, options[0]);
 
         if (res != -1) {
-            listener.onModeSelected(res + 1); // מעביר 1, 2 או 3 ל-SpaceGamePanel
+            listener.onModeSelected(res + 1, isHebrew);
         }
     }
-      private void updateTexts() {
+
+    private void updateTexts() {
         if (isHebrew) {
             titleLabel.setText("משחק מבוך בחלל");
             authorLabel.setText("פותח על ידי נועם רביבו");

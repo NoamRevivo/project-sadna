@@ -15,48 +15,87 @@ public class SpaceGamePanel extends JPanel implements Runnable {
     private volatile boolean isRunning = false;
     private boolean isPaused = false;
     private boolean up, down, left, right;
-    private boolean hasStartedMoving = false; // המשתנה שדואג שהמשחק ימתין ללחיצה
+    private boolean hasStartedMoving = false;
 
     private int timeLeft;
     private int frameCounter = 0;
     private int currentLevel = 1;
     private int lives = 3;
     private int gameMode = 1;
+    private boolean isHebrew = true;
+
+    private Runnable onMenuReturn;
+
+    // הכפתור החדש שלנו
+    private JButton menuButton;
 
     public SpaceGamePanel() {
         this.setBackground(Color.BLACK);
         this.setFocusable(true);
+        this.setLayout(null); // חובה כדי שנוכל למקם את הכפתור איפה שנרצה
+
+        setupMenuButton(); // יצירת הכפתור
         setupKeyListener();
+    }
+
+    // פונקציה לבניית הכפתור
+    private void setupMenuButton() {
+        menuButton = new JButton();
+        menuButton.setFont(new Font("Arial", Font.BOLD, 14));
+        menuButton.setBackground(Color.DARK_GRAY);
+        menuButton.setForeground(Color.WHITE);
+        // קריטי! מונע מהכפתור "לגנוב" את הפוקוס של המקלדת
+        menuButton.setFocusable(false);
+
+        // כשהמשתמש לוחץ על הכפתור - עוצרים את המשחק וחוזרים לתפריט
+        menuButton.addActionListener(e -> {
+            isRunning = false;
+            if (onMenuReturn != null) onMenuReturn.run();
+        });
+
+        this.add(menuButton);
     }
 
     public void setGameMode(int mode) { this.gameMode = mode; }
 
+    public void setHebrew(boolean isHebrew) {
+        this.isHebrew = isHebrew;
+        // עדכון הטקסט של הכפתור בזמן אמת לפי השפה
+        if (menuButton != null) {
+            menuButton.setText(isHebrew ? "תפריט ראשי" : "Main Menu");
+        }
+    }
+
+    public void setOnMenuReturn(Runnable onMenuReturn) { this.onMenuReturn = onMenuReturn; }
+
     private void initLevel(int level) {
+        int w = getWidth() > 0 ? getWidth() : 800;
+        int h = getHeight() > 0 ? getHeight() : 600;
+
         player = new Player(30, 40);
-        goal = new Rectangle(740, 510, 40, 40); // היעד ממוקם בפינה למטה
+        goal = new Rectangle(w - 70, h - 90, 40, 40);
         Random rand = new Random();
 
         int wallCount = 2 + (level / 12);
         mazeWalls = new Wall[wallCount * 2];
 
-        // תיקון המבוך: הגבלנו את הטווח המקסימלי כדי שלא יסתיר את היעד הירוק!
         if (level % 2 != 0) {
-            int segment = 580 / wallCount;
+            int segment = (w - 200) / wallCount;
             for (int i = 0; i < wallCount; i++) {
-                int x = 120 + (i * segment); // ה-X המקסימלי יעצור הרבה לפני היעד
+                int x = 120 + (i * segment);
                 int gap = 90 + rand.nextInt(100);
-                int gapY = 50 + rand.nextInt(350);
+                int gapY = 50 + rand.nextInt(Math.max(1, h - 300));
                 mazeWalls[i * 2] = new Wall(x, 0, 25, gapY);
-                mazeWalls[i * 2 + 1] = new Wall(x, gapY + gap, 25, 600);
+                mazeWalls[i * 2 + 1] = new Wall(x, gapY + gap, 25, Math.max(h, 2000));
             }
         } else {
-            int segment = 380 / wallCount; // הגבלנו את ה-Y כדי שהקירות לא ירדו למטה מדי
+            int segment = (h - 150) / wallCount;
             for (int i = 0; i < wallCount; i++) {
                 int y = 100 + (i * segment);
                 int gap = 90 + rand.nextInt(100);
-                int gapX = 150 + rand.nextInt(400);
+                int gapX = 150 + rand.nextInt(Math.max(1, w - 300));
                 mazeWalls[i * 2] = new Wall(0, y, gapX, 25);
-                mazeWalls[i * 2 + 1] = new Wall(gapX + gap, y, 800, 25);
+                mazeWalls[i * 2 + 1] = new Wall(gapX + gap, y, Math.max(w, 2000), 25);
             }
         }
 
@@ -64,12 +103,12 @@ public class SpaceGamePanel extends JPanel implements Runnable {
         asteroids = new Asteroid[astCount];
         for (int i = 0; i < astCount; i++) {
             int speed = 2 + (level / 15);
-            asteroids[i] = new Asteroid(200 + rand.nextInt(400), 100 + rand.nextInt(300), 25, 25, speed, speed);
+            asteroids[i] = new Asteroid(200 + rand.nextInt(Math.max(1, w - 300)), 100 + rand.nextInt(Math.max(1, h - 200)), 25, 25, speed, speed);
         }
 
         timeLeft = 15 + (level * 45 / 50);
         up = down = left = right = false;
-        hasStartedMoving = false; // מאפס את הדגל כך שהמשחק ימתין למשתמש
+        hasStartedMoving = false;
     }
 
     public void startGame() {
@@ -78,7 +117,10 @@ public class SpaceGamePanel extends JPanel implements Runnable {
         } else if (gameMode == 2) {
             currentLevel = new Random().nextInt(50) + 1;
         } else if (gameMode == 3) {
-            String val = JOptionPane.showInputDialog(null, "אנא הקלד מספר שלב (1-50):", "בחירת שלב ידנית", JOptionPane.QUESTION_MESSAGE);
+            String msg = isHebrew ? "אנא הקלד מספר שלב (1-50):" : "Please enter level number (1-50):";
+            String title = isHebrew ? "בחירת שלב ידנית" : "Manual Level Selection";
+
+            String val = JOptionPane.showInputDialog(null, msg, title, JOptionPane.QUESTION_MESSAGE);
             try {
                 if (val != null && !val.trim().isEmpty()) {
                     currentLevel = Math.max(1, Math.min(50, Integer.parseInt(val)));
@@ -110,7 +152,6 @@ public class SpaceGamePanel extends JPanel implements Runnable {
     }
 
     private void update() {
-        // בודק אם השחקן לחץ על חץ כדי להתחיל להזיז את המשחק
         if (!hasStartedMoving && (up || down || left || right)) {
             hasStartedMoving = true;
         }
@@ -123,25 +164,27 @@ public class SpaceGamePanel extends JPanel implements Runnable {
         for (Wall w : mazeWalls) if (w != null && next.intersects(w.getBounds())) hit = true;
 
         if (!hit) {
-            player.setX(Math.max(0, Math.min(760, nx)));
-            player.setY(Math.max(30, Math.min(560, ny)));
+            player.setX(Math.max(0, Math.min(getWidth() - player.getWidth(), nx)));
+            player.setY(Math.max(30, Math.min(getHeight() - player.getHeight(), ny)));
         }
 
-        // האסטרואידים והזמן פועלים *רק* אם השחקן התחיל לזוז
         if (hasStartedMoving) {
             for (Asteroid a : asteroids) {
                 if (a != null) {
                     a.move();
-                    if (a.getX() < 0 || a.getX() > 770) a.reverseX();
-                    if (a.getY() < 30 || a.getY() > 570) a.reverseY();
-                    if (next.intersects(a.getBounds())) { handleDeath("נפגעת מאסטרואיד!"); return; }
+                    if (a.getX() < 0 || a.getX() > getWidth() - a.getWidth()) a.reverseX();
+                    if (a.getY() < 30 || a.getY() > getHeight() - a.getHeight()) a.reverseY();
+                    if (next.intersects(a.getBounds())) {
+                        handleDeath(isHebrew ? "נפגעת מאסטרואיד!" : "Hit by an asteroid!");
+                        return;
+                    }
                 }
             }
 
             frameCounter++;
             if (frameCounter >= 60) {
                 timeLeft--; frameCounter = 0;
-                if (timeLeft <= 0) handleDeath("נגמר הזמן!");
+                if (timeLeft <= 0) handleDeath(isHebrew ? "נגמר הזמן!" : "Time's up!");
             }
         }
 
@@ -150,29 +193,46 @@ public class SpaceGamePanel extends JPanel implements Runnable {
                 currentLevel++;
                 initLevel(currentLevel);
             } else {
-                JOptionPane.showMessageDialog(null, "כל הכבוד! ניצחת במשחק!");
-                System.exit(0);
+                showEndGameMenu(isHebrew ? "כל הכבוד! ניצחת במשחק!" : "Congratulations! You won the game!", isHebrew ? "ניצחון" : "Victory");
             }
         }
     }
 
-    // פונקציית הפסילה החדשה שמקבלת את סיבת המוות ומציגה אותה עם החיים שנותרו
     private void handleDeath(String reason) {
         lives--;
-        up = down = left = right = false; // איפוס מקשים כדי למנוע תזוזה מקרית
+        up = down = left = right = false;
 
         if (lives <= 0) {
-            JOptionPane.showMessageDialog(null, reason + "\nהמשחק נגמר! לא נותרו לך חיים.");
-            System.exit(0);
+            String msg = reason + (isHebrew ? "\nהמשחק נגמר! לא נותרו לך חיים." : "\nGame Over! No lives remaining.");
+            showEndGameMenu(msg, "Game Over");
         } else {
-            JOptionPane.showMessageDialog(null, reason + "\nנותרו לך " + lives + " חיים.\nלחץ OK ואז על אחד החצים כדי להמשיך.");
+            String msg = reason + (isHebrew ? "\nנותרו לך " + lives + " חיים.\nלחץ OK ואז על אחד החצים כדי להמשיך." : "\nYou have " + lives + " lives remaining.\nPress OK and then an arrow key to continue.");
+            JOptionPane.showMessageDialog(null, msg);
             initLevel(currentLevel);
+        }
+    }
+
+    private void showEndGameMenu(String message, String title) {
+        Object[] options = isHebrew ? new Object[]{"חזור לתפריט", "יציאה מהמשחק"} : new Object[]{"Return to Menu", "Exit Game"};
+        int choice = JOptionPane.showOptionDialog(null, message, title,
+                JOptionPane.YES_NO_OPTION, JOptionPane.INFORMATION_MESSAGE, null, options, options[0]);
+
+        if (choice == 0) {
+            isRunning = false;
+            if (onMenuReturn != null) onMenuReturn.run();
+        } else {
+            System.exit(0);
         }
     }
 
     @Override
     protected void paintComponent(Graphics g) {
         super.paintComponent(g);
+
+        // עדכון המיקום של כפתור החזרה לתפריט בכל ציור מחדש (למקרה שהמסך שונה)
+        if (menuButton != null) {
+            menuButton.setBounds(getWidth() - 140, 2, 120, 26);
+        }
 
         g.setColor(Color.GREEN);
         g.fillRect(goal.x, goal.y, goal.width, goal.height);
@@ -183,26 +243,26 @@ public class SpaceGamePanel extends JPanel implements Runnable {
         player.draw(g);
 
         g.setColor(Color.BLACK);
-        g.fillRect(0, 0, 800, 30);
+        g.fillRect(0, 0, getWidth(), 30);
 
         g.setColor(Color.DARK_GRAY);
-        g.drawLine(0, 30, 800, 30);
+        g.drawLine(0, 30, getWidth(), 30);
 
         g.setColor(Color.WHITE);
         g.setFont(new Font("Arial", Font.BOLD, 16));
         g.drawString("Level: " + currentLevel + " | Lives: " + lives + " | Time: " + timeLeft, 20, 21);
 
-        // כיתוב שמנחה את השחקן להתחיל לנוע
         if (!hasStartedMoving && !isPaused) {
             g.setColor(Color.YELLOW);
             g.setFont(new Font("Arial", Font.BOLD, 24));
-            g.drawString("לחץ על אחד החצים כדי להתחיל!", 220, 280);
+            String startMsg = isHebrew ? "לחץ על אחד החצים כדי להתחיל!" : "Press any arrow key to start!";
+            g.drawString(startMsg, getWidth() / 2 - (isHebrew ? 160 : 180), getHeight() / 2);
         }
 
         if (isPaused) {
             g.setColor(Color.YELLOW);
             g.setFont(new Font("Arial", Font.BOLD, 40));
-            g.drawString("PAUSED", 320, 300);
+            g.drawString("PAUSED", getWidth() / 2 - 80, getHeight() / 2);
         }
     }
 
