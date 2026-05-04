@@ -16,7 +16,7 @@ public class SpaceGamePanel extends JPanel implements Runnable {
     private static final int TOP_BAR_HEIGHT = 30;
     private static final int MIN_RANDOM_BOUND = 1;
 
-    // הגדרות שחקן (חללית) - גדלים מוגדלים
+    // הגדרות שחקן (חללית)
     private static final int PLAYER_START_WIDTH = 65;
     private static final int PLAYER_START_HEIGHT = 75;
     private static final int PLAYER_SPEED = 5;
@@ -56,17 +56,18 @@ public class SpaceGamePanel extends JPanel implements Runnable {
     private static final int WALL_VERT_GAP_MIN_Y = 50;
     private static final int WALL_VERT_GAP_SUB = 300;
 
-    private static final int WALL_HORIZ_START_Y = 100;
+    // שונה ל-140 כדי שהחללית לא תיוולד בתוך קיר בשלבים זוגיים
+    private static final int WALL_HORIZ_START_Y = 140;
     private static final int WALL_HORIZ_SEGMENT_SUB = 150;
     private static final int WALL_HORIZ_GAP_MIN_X = 150;
     private static final int WALL_HORIZ_GAP_SUB = 300;
 
-    // הגדרות טילים (Rockets)
+    // הגדרות טילים (Rockets) מותאמות לשמירה על איזון
     private static final int ROCKET_BASE_COUNT = 1;
-    private static final int ROCKET_LEVEL_DIVISOR = 10;
+    private static final int ROCKET_LEVEL_DIVISOR = 20; // פחות טילים בשלבים מתקדמים
     private static final int ROCKET_SIZE = 85;
-    private static final int ROCKET_BASE_SPEED = 2;
-    private static final int ROCKET_SPEED_DIVISOR = 15;
+    private static final int ROCKET_BASE_SPEED = 1;     // מהירות התחלתית איטית יותר
+    private static final int ROCKET_SPEED_DIVISOR = 20; // עליית מהירות מתונה יותר
     private static final int ROCKET_SPAWN_X_BASE = 200;
     private static final int ROCKET_SPAWN_Y_BASE = 100;
     private static final int ROCKET_SPAWN_X_SUB = 400;
@@ -91,7 +92,7 @@ public class SpaceGamePanel extends JPanel implements Runnable {
 
     // =========================================
 
-    private Spaceship spaceship; // שונה לאות קטנה למען תקינות קוד
+    private Spaceship spaceship;
     private Wall[] mazeWalls;
     private Rocket[] rockets;
     private Rectangle goal;
@@ -238,7 +239,6 @@ public class SpaceGamePanel extends JPanel implements Runnable {
             hasStartedMoving = true;
         }
 
-        // חישוב המיקום העתידי של השחקן (הלוגיקה המקורית שלך)
         int nx = spaceship.getX();
         int ny = spaceship.getY();
 
@@ -250,7 +250,6 @@ public class SpaceGamePanel extends JPanel implements Runnable {
         Rectangle next = new Rectangle(nx, ny, spaceship.getWidth(), spaceship.getHeight());
         boolean hitWall = false;
 
-        // בדיקת פגיעה בקירות - בלולאת for רגילה
         for (int i = 0; i < mazeWalls.length; i++) {
             Wall w = mazeWalls[i];
             if (w != null && next.intersects(w.getBounds())) {
@@ -258,7 +257,6 @@ public class SpaceGamePanel extends JPanel implements Runnable {
             }
         }
 
-        // אם לא פגע בקיר, נזיז את השחקן (עם הגבלות גבולות המסך)
         if (!hitWall) {
             spaceship.setX(Math.max(0, Math.min(getWidth() - spaceship.getWidth(), nx)));
             spaceship.setY(Math.max(TOP_BAR_HEIGHT, Math.min(getHeight() - spaceship.getHeight(), ny)));
@@ -267,14 +265,11 @@ public class SpaceGamePanel extends JPanel implements Runnable {
         if (hasStartedMoving) {
             Rectangle currentShipBounds = spaceship.getBounds();
 
-            // עדכון טילים - בלולאת for רגילה
             for (int i = 0; i < rockets.length; i++) {
                 Rocket r = rockets[i];
                 if (r != null) {
-                    // הפעלת לוגיקת המעקב
                     r.trackPlayer(spaceship.getX(), spaceship.getY());
 
-                    // בדיקת התנגשות בין השחקן לטיל
                     if (currentShipBounds.intersects(r.getBounds())) {
                         handleDeath(isHebrew ? "נפגעת מטיל!" : "Hit by a rocket!");
                         return;
@@ -290,7 +285,6 @@ public class SpaceGamePanel extends JPanel implements Runnable {
             }
         }
 
-        // הגעה ליעד
         if (spaceship.getBounds().intersects(goal)) {
             if (currentLevel < MAX_LEVEL) {
                 currentLevel++;
@@ -337,13 +331,11 @@ public class SpaceGamePanel extends JPanel implements Runnable {
         g.setColor(Color.GREEN);
         g.fillRect(goal.x, goal.y, goal.width, goal.height);
 
-        // ציור חומות - בלולאת for רגילה
         for (int i = 0; i < mazeWalls.length; i++) {
             Wall w = mazeWalls[i];
             if (w != null) w.draw(g);
         }
 
-        // ציור טילים - בלולאת for רגילה
         for (int i = 0; i < rockets.length; i++) {
             Rocket r = rockets[i];
             if (r != null) r.draw(g);

@@ -1,6 +1,7 @@
 package org.example;
 
 import java.awt.*;
+import java.awt.geom.AffineTransform;
 import java.io.IOException;
 import javax.imageio.ImageIO;
 import java.net.URL;
@@ -9,9 +10,9 @@ public class Rocket {
     private static final String IMAGE_PATH = "/rocket.png";
     private static final Color FALLBACK_COLOR = Color.RED;
 
-    private double x, y; // חייב להישאר double בשביל תנועה חלקה
-    private int width, height, speedX, speedY; // שמרתי על המשתנים המקוריים
-    private double speed = 3.0;
+    private double x, y;
+    private int width, height, speedX, speedY;
+    private double speed;
     private double angle = 0;
     private Image image;
 
@@ -22,6 +23,9 @@ public class Rocket {
         this.height = height;
         this.speedX = speedX;
         this.speedY = speedY;
+
+        // הטיל מקבל את המהירות מהשלב, במקום מספר קבוע
+        this.speed = speedX;
 
         try {
             URL imageUrl = getClass().getResource(IMAGE_PATH);
@@ -34,7 +38,6 @@ public class Rocket {
     }
 
     public void trackPlayer(int playerX, int playerY) {
-        // חישוב המרחק למרכז השחקן
         double diffX = (double) playerX - (this.x + (this.width / 2.0));
         double diffY = (double) playerY - (this.y + (this.height / 2.0));
 
@@ -48,7 +51,6 @@ public class Rocket {
         if (image != null) {
             Graphics2D g2d = (Graphics2D) g.create();
 
-            // המרה ל-double לצורך חישוב מרכז הסיבוב
             double centerX = this.x + (this.width / 2.0);
             double centerY = this.y + (this.height / 2.0);
 
@@ -63,7 +65,14 @@ public class Rocket {
     }
 
     public Rectangle getBounds() {
-        return new Rectangle((int) this.x, (int) this.y, width, height);
+        // קופסת פגיעה מוקטנת למניעת פסילות שווא מפינות שקופות
+        int shrinkAmount = 40;
+        int hitX = (int) this.x + (shrinkAmount / 2);
+        int hitY = (int) this.y + (shrinkAmount / 2);
+        int hitWidth = width - shrinkAmount;
+        int hitHeight = height - shrinkAmount;
+
+        return new Rectangle(hitX, hitY, hitWidth, hitHeight);
     }
 
     public int getX() { return (int) x; }
@@ -71,7 +80,6 @@ public class Rocket {
     public int getWidth() { return width; }
     public int getHeight() { return height; }
 
-    // שמרתי על המתודות המקוריות שלך למקרה שהן נקראות במקום אחר
     public void reverseX() { speedX = -speedX; }
     public void reverseY() { speedY = -speedY; }
 }

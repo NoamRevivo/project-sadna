@@ -25,7 +25,7 @@ public class MenuPanel extends JPanel
     private static final String HEB_TITLE = "משחק מבוך בחלל";
     private static final String HEB_AUTHOR = "פותח על ידי נועם רביבו";
     private static final String HEB_BTN_START = "בחר מצב משחק להתחלה";
-    private static final String HEB_INSTRUCTIONS = "הוראות:\n1. נווט עם החיצים.\n2. הימנע מקירות ואסטרואידים.\n3. המטרה: להגיע ליעד הירוק.\n4. בכל שלב ניתן ללחוץ על מקש P להפסקה.";
+    private static final String HEB_INSTRUCTIONS = "הוראות:\n1. נווט עם החיצים.\n2. נסה להתחמק מהטילים זהירות!! פגיעה בטיל תוביל לפסילה.\n3. המטרה: להגיע עם החללית ליעד הירוק.\n4. בכל שלב ניתן ללחוץ על מקש P להפסקה.";
     private static final String HEB_DIALOG_TITLE = "בחר מצב משחק";
     private static final String HEB_DIALOG_MSG = "בחר את סוג המשימה:";
     private static final Object[] HEB_OPTIONS = {"משחק רגיל", "שלב אקראי", "בחירת שלב"};
@@ -33,7 +33,7 @@ public class MenuPanel extends JPanel
     private static final String ENG_TITLE = "Space Maze";
     private static final String ENG_AUTHOR = "Developed by Noam Revivo";
     private static final String ENG_BTN_START = "Select Game Mode to Start";
-    private static final String ENG_INSTRUCTIONS = "Instructions:\n1. Move with Arrow Keys.\n2. Avoid walls and asteroids.\n3. Reach the Green Goal.\n4. Press P to Pause.";
+    private static final String ENG_INSTRUCTIONS = "Instructions:\n1. Move with Arrow Keys.\n2. Avoid missiles - Watch out!! Getting hit will result in disqualification.\n3. Goal: Reach the Green Target with your spaceship.\n4. Press P at any stage to Pause.";
     private static final String ENG_DIALOG_TITLE = "Select Game Mode";
     private static final String ENG_DIALOG_MSG = "Choose mission type:";
     private static final Object[] ENG_OPTIONS = {"Normal Game", "Random Level", "Select Level"};

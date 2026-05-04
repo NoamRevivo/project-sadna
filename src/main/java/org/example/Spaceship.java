@@ -13,7 +13,7 @@ public class Spaceship {
 
     private int x, y, width, height;
     private Image image;
-    private int step = 10; // מהירות תזוזת השחקן
+    private int step = 10;
 
     public Spaceship(int width, int height) {
         this.x = DEFAULT_START_X;
@@ -30,7 +30,6 @@ public class Spaceship {
         }
     }
 
-    // מתודות תזוזה שתוכל לקרוא להן מה-KeyListener
     public void moveUp() { y -= step; }
     public void moveDown() { y += step; }
     public void moveLeft() { x -= step; }
@@ -53,6 +52,13 @@ public class Spaceship {
     }
 
     public Rectangle getBounds() {
-        return new Rectangle(x, y, width, height);
+        // קופסת פגיעה מוקטנת לחללית
+        int shrinkAmount = 20;
+        int hitX = x + (shrinkAmount / 2);
+        int hitY = y + (shrinkAmount / 2);
+        int hitWidth = width - shrinkAmount;
+        int hitHeight = height - shrinkAmount;
+
+        return new Rectangle(hitX, hitY, hitWidth, hitHeight);
     }
 }
