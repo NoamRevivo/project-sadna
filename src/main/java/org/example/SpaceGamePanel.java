@@ -61,15 +61,15 @@ public class SpaceGamePanel extends JPanel implements Runnable {
     private static final int WALL_HORIZ_GAP_MIN_X = 150;
     private static final int WALL_HORIZ_GAP_SUB = 300;
 
-    // הגדרות טילים (Rockets) - הוגדלו משמעותית לבקשתך
+    // הגדרות טילים (Rockets)
     private static final int ROCKET_BASE_COUNT = 1;
     private static final int ROCKET_LEVEL_DIVISOR = 10;
-    private static final int ROCKET_SIZE = 85;         // גודל בולט וברור על המסך
+    private static final int ROCKET_SIZE = 85;
     private static final int ROCKET_BASE_SPEED = 2;
     private static final int ROCKET_SPEED_DIVISOR = 15;
     private static final int ROCKET_SPAWN_X_BASE = 200;
     private static final int ROCKET_SPAWN_Y_BASE = 100;
-    private static final int ROCKET_SPAWN_X_SUB = 400; // טווח רחב יותר למניעת תקיעות
+    private static final int ROCKET_SPAWN_X_SUB = 400;
     private static final int ROCKET_SPAWN_Y_SUB = 300;
 
     // הגדרות גופנים וטקסטים
@@ -91,9 +91,9 @@ public class SpaceGamePanel extends JPanel implements Runnable {
 
     // =========================================
 
-    private Spaceship Spaceship;
+    private Spaceship spaceship; // שונה לאות קטנה למען תקינות קוד
     private Wall[] mazeWalls;
-    private Rocket[] rockets; // מערך טילים במקום אסטרואידים
+    private Rocket[] rockets;
     private Rectangle goal;
 
     private Thread gameThread;
@@ -151,7 +151,7 @@ public class SpaceGamePanel extends JPanel implements Runnable {
         int w = getWidth() > 0 ? getWidth() : DEFAULT_WIDTH;
         int h = getHeight() > 0 ? getHeight() : DEFAULT_HEIGHT;
 
-        Spaceship = new Spaceship(PLAYER_START_WIDTH, PLAYER_START_HEIGHT);
+        spaceship = new Spaceship(PLAYER_START_WIDTH, PLAYER_START_HEIGHT);
         goal = new Rectangle(w - GOAL_OFFSET_X, h - GOAL_OFFSET_Y, GOAL_WIDTH, GOAL_HEIGHT);
         Random rand = new Random();
 
@@ -178,7 +178,6 @@ public class SpaceGamePanel extends JPanel implements Runnable {
             }
         }
 
-        // אתחול טילים בגודל המעודכן
         int rocketCount = ROCKET_BASE_COUNT + (level / ROCKET_LEVEL_DIVISOR);
         rockets = new Rocket[rocketCount];
         for (int i = 0; i < rocketCount; i++) {
@@ -239,28 +238,44 @@ public class SpaceGamePanel extends JPanel implements Runnable {
             hasStartedMoving = true;
         }
 
-        int nx = Spaceship.getX(), ny = Spaceship.getY();
+        // חישוב המיקום העתידי של השחקן (הלוגיקה המקורית שלך)
+        int nx = spaceship.getX();
+        int ny = spaceship.getY();
+
         if (up) ny -= PLAYER_SPEED;
         if (down) ny += PLAYER_SPEED;
         if (left) nx -= PLAYER_SPEED;
         if (right) nx += PLAYER_SPEED;
 
-        Rectangle next = new Rectangle(nx, ny, Spaceship.getWidth(), Spaceship.getHeight());
-        boolean hit = false;
-        for (Wall w : mazeWalls) if (w != null && next.intersects(w.getBounds())) hit = true;
+        Rectangle next = new Rectangle(nx, ny, spaceship.getWidth(), spaceship.getHeight());
+        boolean hitWall = false;
 
-        if (!hit) {
-            Spaceship.setX(Math.max(0, Math.min(getWidth() - Spaceship.getWidth(), nx)));
-            Spaceship.setY(Math.max(TOP_BAR_HEIGHT, Math.min(getHeight() - Spaceship.getHeight(), ny)));
+        // בדיקת פגיעה בקירות - בלולאת for רגילה
+        for (int i = 0; i < mazeWalls.length; i++) {
+            Wall w = mazeWalls[i];
+            if (w != null && next.intersects(w.getBounds())) {
+                hitWall = true;
+            }
+        }
+
+        // אם לא פגע בקיר, נזיז את השחקן (עם הגבלות גבולות המסך)
+        if (!hitWall) {
+            spaceship.setX(Math.max(0, Math.min(getWidth() - spaceship.getWidth(), nx)));
+            spaceship.setY(Math.max(TOP_BAR_HEIGHT, Math.min(getHeight() - spaceship.getHeight(), ny)));
         }
 
         if (hasStartedMoving) {
-            for (Rocket r : rockets) {
+            Rectangle currentShipBounds = spaceship.getBounds();
+
+            // עדכון טילים - בלולאת for רגילה
+            for (int i = 0; i < rockets.length; i++) {
+                Rocket r = rockets[i];
                 if (r != null) {
-                    r.move();
-                    if (r.getX() < 0 || r.getX() > getWidth() - r.getWidth()) r.reverseX();
-                    if (r.getY() < TOP_BAR_HEIGHT || r.getY() > getHeight() - r.getHeight()) r.reverseY();
-                    if (next.intersects(r.getBounds())) {
+                    // הפעלת לוגיקת המעקב
+                    r.trackPlayer(spaceship.getX(), spaceship.getY());
+
+                    // בדיקת התנגשות בין השחקן לטיל
+                    if (currentShipBounds.intersects(r.getBounds())) {
                         handleDeath(isHebrew ? "נפגעת מטיל!" : "Hit by a rocket!");
                         return;
                     }
@@ -269,12 +284,14 @@ public class SpaceGamePanel extends JPanel implements Runnable {
 
             frameCounter++;
             if (frameCounter >= FRAMES_PER_SECOND) {
-                timeLeft--; frameCounter = 0;
+                timeLeft--;
+                frameCounter = 0;
                 if (timeLeft <= 0) handleDeath(isHebrew ? "נגמר הזמן!" : "Time's up!");
             }
         }
 
-        if (next.intersects(goal)) {
+        // הגעה ליעד
+        if (spaceship.getBounds().intersects(goal)) {
             if (currentLevel < MAX_LEVEL) {
                 currentLevel++;
                 initLevel(currentLevel);
@@ -320,10 +337,19 @@ public class SpaceGamePanel extends JPanel implements Runnable {
         g.setColor(Color.GREEN);
         g.fillRect(goal.x, goal.y, goal.width, goal.height);
 
-        for (Wall w : mazeWalls) if (w != null) w.draw(g);
-        for (Rocket r : rockets) if (r != null) r.draw(g); // ציור טילים
+        // ציור חומות - בלולאת for רגילה
+        for (int i = 0; i < mazeWalls.length; i++) {
+            Wall w = mazeWalls[i];
+            if (w != null) w.draw(g);
+        }
 
-        Spaceship.draw(g);
+        // ציור טילים - בלולאת for רגילה
+        for (int i = 0; i < rockets.length; i++) {
+            Rocket r = rockets[i];
+            if (r != null) r.draw(g);
+        }
+
+        spaceship.draw(g);
 
         g.setColor(Color.BLACK);
         g.fillRect(0, 0, getWidth(), TOP_BAR_HEIGHT);
