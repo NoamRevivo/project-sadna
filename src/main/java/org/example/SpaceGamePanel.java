@@ -1,38 +1,47 @@
 package org.example;
+
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.*;
 import java.util.Random;
 
-public class SpaceGamePanel extends JPanel implements Runnable
-{
+public class SpaceGamePanel extends JPanel implements Runnable {
+
+    // =========================================
+    // --- קבועים (Constants) לתחזוקה קלה ---
+    // =========================================
+
     private static final int DEFAULT_WIDTH = 800;
     private static final int DEFAULT_HEIGHT = 600;
     private static final int TOP_BAR_HEIGHT = 30;
     private static final int MIN_RANDOM_BOUND = 1;
-    // הגדרות שחקן
-    private static final int PLAYER_START_WIDTH = 30;
-    private static final int PLAYER_START_HEIGHT = 40;
+
+    // הגדרות שחקן (חללית) - גדלים מוגדלים
+    private static final int PLAYER_START_WIDTH = 65;
+    private static final int PLAYER_START_HEIGHT = 75;
     private static final int PLAYER_SPEED = 5;
     private static final int STARTING_LIVES = 3;
 
-    // הגדרות יעד
+    // הגדרות יעד (Goal)
     private static final int GOAL_WIDTH = 40;
     private static final int GOAL_HEIGHT = 40;
     private static final int GOAL_OFFSET_X = 70;
     private static final int GOAL_OFFSET_Y = 90;
 
+    // הגדרות זמנים ופריימים
     private static final int FPS_SLEEP_MS = 16;
     private static final int FRAMES_PER_SECOND = 60;
     private static final int BASE_TIME = 15;
     private static final int TIME_MULT_NUM = 45;
     private static final int TIME_MULT_DEN = 50;
+
     // הגדרות שלבים ומצבי משחק
     private static final int MAX_LEVEL = 50;
     private static final int STARTING_LEVEL = 1;
     private static final int MODE_NORMAL = 1;
     private static final int MODE_RANDOM = 2;
     private static final int MODE_MANUAL = 3;
+
     // הגדרות חומות (Walls)
     private static final int WALL_THICKNESS = 25;
     private static final int WALL_BASE_COUNT = 2;
@@ -52,16 +61,16 @@ public class SpaceGamePanel extends JPanel implements Runnable
     private static final int WALL_HORIZ_GAP_MIN_X = 150;
     private static final int WALL_HORIZ_GAP_SUB = 300;
 
-    // הגדרות אסטרואידים
-    private static final int AST_BASE_COUNT = 1;
-    private static final int AST_LEVEL_DIVISOR = 10;
-    private static final int AST_SIZE = 25;
-    private static final int AST_BASE_SPEED = 2;
-    private static final int AST_SPEED_DIVISOR = 15;
-    private static final int AST_SPAWN_X_BASE = 200;
-    private static final int AST_SPAWN_Y_BASE = 100;
-    private static final int AST_SPAWN_X_SUB = 300;
-    private static final int AST_SPAWN_Y_SUB = 200;
+    // הגדרות טילים (Rockets) - הוגדלו משמעותית לבקשתך
+    private static final int ROCKET_BASE_COUNT = 1;
+    private static final int ROCKET_LEVEL_DIVISOR = 10;
+    private static final int ROCKET_SIZE = 85;         // גודל בולט וברור על המסך
+    private static final int ROCKET_BASE_SPEED = 2;
+    private static final int ROCKET_SPEED_DIVISOR = 15;
+    private static final int ROCKET_SPAWN_X_BASE = 200;
+    private static final int ROCKET_SPAWN_Y_BASE = 100;
+    private static final int ROCKET_SPAWN_X_SUB = 400; // טווח רחב יותר למניעת תקיעות
+    private static final int ROCKET_SPAWN_Y_SUB = 300;
 
     // הגדרות גופנים וטקסטים
     private static final int FONT_SIZE_SMALL = 14;
@@ -80,9 +89,11 @@ public class SpaceGamePanel extends JPanel implements Runnable
     private static final int MENU_BTN_OFFSET_X = 140;
     private static final int MENU_BTN_OFFSET_Y = 2;
 
-    private Player player;
+    // =========================================
+
+    private Spaceship Spaceship;
     private Wall[] mazeWalls;
-    private Asteroid[] asteroids;
+    private Rocket[] rockets; // מערך טילים במקום אסטרואידים
     private Rectangle goal;
 
     private Thread gameThread;
@@ -99,23 +110,22 @@ public class SpaceGamePanel extends JPanel implements Runnable
     private boolean isHebrew = true;
 
     private Runnable onMenuReturn;
-
     private JButton menuButton;
 
     public SpaceGamePanel() {
         this.setBackground(Color.BLACK);
         this.setFocusable(true);
-        this.setLayout(null); // חובה כדי שנוכל למקם את הכפתור איפה שנרצה
-        setupMenuButton(); // יצירת הכפתור
+        this.setLayout(null);
+
+        setupMenuButton();
         setupKeyListener();
     }
-    // פונקציה לבניית הכפתור
+
     private void setupMenuButton() {
         menuButton = new JButton();
         menuButton.setFont(new Font("Arial", Font.BOLD, FONT_SIZE_SMALL));
         menuButton.setBackground(Color.DARK_GRAY);
         menuButton.setForeground(Color.WHITE);
-        // קריטי! מונע מהכפתור "לגנוב" את הפוקוס של המקלדת
         menuButton.setFocusable(false);
 
         menuButton.addActionListener(e -> {
@@ -125,10 +135,10 @@ public class SpaceGamePanel extends JPanel implements Runnable
 
         this.add(menuButton);
     }
+
     public void setGameMode(int mode) { this.gameMode = mode; }
 
-    public void setHebrew(boolean isHebrew)
-    {
+    public void setHebrew(boolean isHebrew) {
         this.isHebrew = isHebrew;
         if (menuButton != null) {
             menuButton.setText(isHebrew ? "תפריט ראשי" : "Main Menu");
@@ -141,13 +151,14 @@ public class SpaceGamePanel extends JPanel implements Runnable
         int w = getWidth() > 0 ? getWidth() : DEFAULT_WIDTH;
         int h = getHeight() > 0 ? getHeight() : DEFAULT_HEIGHT;
 
-        player = new Player(PLAYER_START_WIDTH, PLAYER_START_HEIGHT);
+        Spaceship = new Spaceship(PLAYER_START_WIDTH, PLAYER_START_HEIGHT);
         goal = new Rectangle(w - GOAL_OFFSET_X, h - GOAL_OFFSET_Y, GOAL_WIDTH, GOAL_HEIGHT);
         Random rand = new Random();
+
         int wallCount = WALL_BASE_COUNT + (level / WALL_LEVEL_DIVISOR);
         mazeWalls = new Wall[wallCount * WALLS_PER_SEGMENT];
-        if (level % 2 != 0)
-        {
+
+        if (level % 2 != 0) {
             int segment = (w - WALL_VERT_SEGMENT_SUB) / wallCount;
             for (int i = 0; i < wallCount; i++) {
                 int x = WALL_VERT_START_X + (i * segment);
@@ -156,9 +167,7 @@ public class SpaceGamePanel extends JPanel implements Runnable
                 mazeWalls[i * WALLS_PER_SEGMENT] = new Wall(x, 0, WALL_THICKNESS, gapY);
                 mazeWalls[i * WALLS_PER_SEGMENT + 1] = new Wall(x, gapY + gap, WALL_THICKNESS, Math.max(h, WALL_MAX_LENGTH));
             }
-        }
-        else
-        {
+        } else {
             int segment = (h - WALL_HORIZ_SEGMENT_SUB) / wallCount;
             for (int i = 0; i < wallCount; i++) {
                 int y = WALL_HORIZ_START_Y + (i * segment);
@@ -169,13 +178,15 @@ public class SpaceGamePanel extends JPanel implements Runnable
             }
         }
 
-        int astCount = AST_BASE_COUNT + (level / AST_LEVEL_DIVISOR);
-        asteroids = new Asteroid[astCount];
-        for (int i = 0; i < astCount; i++) {
-            int speed = AST_BASE_SPEED + (level / AST_SPEED_DIVISOR);
-            asteroids[i] = new Asteroid(AST_SPAWN_X_BASE + rand.nextInt(Math.max(MIN_RANDOM_BOUND, w - AST_SPAWN_X_SUB)),
-                    AST_SPAWN_Y_BASE + rand.nextInt(Math.max(MIN_RANDOM_BOUND, h - AST_SPAWN_Y_SUB)),
-                    AST_SIZE, AST_SIZE, speed, speed);
+        // אתחול טילים בגודל המעודכן
+        int rocketCount = ROCKET_BASE_COUNT + (level / ROCKET_LEVEL_DIVISOR);
+        rockets = new Rocket[rocketCount];
+        for (int i = 0; i < rocketCount; i++) {
+            int speed = ROCKET_BASE_SPEED + (level / ROCKET_SPEED_DIVISOR);
+            rockets[i] = new Rocket(
+                    ROCKET_SPAWN_X_BASE + rand.nextInt(Math.max(MIN_RANDOM_BOUND, w - ROCKET_SPAWN_X_SUB)),
+                    ROCKET_SPAWN_Y_BASE + rand.nextInt(Math.max(MIN_RANDOM_BOUND, h - ROCKET_SPAWN_Y_SUB)),
+                    ROCKET_SIZE, ROCKET_SIZE, speed, speed);
         }
 
         timeLeft = BASE_TIME + (level * TIME_MULT_NUM / TIME_MULT_DEN);
@@ -228,29 +239,29 @@ public class SpaceGamePanel extends JPanel implements Runnable
             hasStartedMoving = true;
         }
 
-        int nx = player.getX(), ny = player.getY();
+        int nx = Spaceship.getX(), ny = Spaceship.getY();
         if (up) ny -= PLAYER_SPEED;
         if (down) ny += PLAYER_SPEED;
         if (left) nx -= PLAYER_SPEED;
         if (right) nx += PLAYER_SPEED;
 
-        Rectangle next = new Rectangle(nx, ny, player.getWidth(), player.getHeight());
+        Rectangle next = new Rectangle(nx, ny, Spaceship.getWidth(), Spaceship.getHeight());
         boolean hit = false;
         for (Wall w : mazeWalls) if (w != null && next.intersects(w.getBounds())) hit = true;
 
         if (!hit) {
-            player.setX(Math.max(0, Math.min(getWidth() - player.getWidth(), nx)));
-            player.setY(Math.max(TOP_BAR_HEIGHT, Math.min(getHeight() - player.getHeight(), ny)));
+            Spaceship.setX(Math.max(0, Math.min(getWidth() - Spaceship.getWidth(), nx)));
+            Spaceship.setY(Math.max(TOP_BAR_HEIGHT, Math.min(getHeight() - Spaceship.getHeight(), ny)));
         }
 
         if (hasStartedMoving) {
-            for (Asteroid a : asteroids) {
-                if (a != null) {
-                    a.move();
-                    if (a.getX() < 0 || a.getX() > getWidth() - a.getWidth()) a.reverseX();
-                    if (a.getY() < TOP_BAR_HEIGHT || a.getY() > getHeight() - a.getHeight()) a.reverseY();
-                    if (next.intersects(a.getBounds())) {
-                        handleDeath(isHebrew ? "נפגעת מאסטרואיד!" : "Hit by an asteroid!");
+            for (Rocket r : rockets) {
+                if (r != null) {
+                    r.move();
+                    if (r.getX() < 0 || r.getX() > getWidth() - r.getWidth()) r.reverseX();
+                    if (r.getY() < TOP_BAR_HEIGHT || r.getY() > getHeight() - r.getHeight()) r.reverseY();
+                    if (next.intersects(r.getBounds())) {
+                        handleDeath(isHebrew ? "נפגעת מטיל!" : "Hit by a rocket!");
                         return;
                     }
                 }
@@ -292,45 +303,51 @@ public class SpaceGamePanel extends JPanel implements Runnable
         int choice = JOptionPane.showOptionDialog(null, message, title,
                 JOptionPane.YES_NO_OPTION, JOptionPane.INFORMATION_MESSAGE, null, options, options[0]);
 
-        if (choice == 0)
-        {
+        if (choice == 0) {
             isRunning = false;
             if (onMenuReturn != null) onMenuReturn.run();
-        }
-        else
-        {
+        } else {
             System.exit(0);
         }
     }
-        protected void paintComponent(Graphics g) {
+
+    @Override
+    protected void paintComponent(Graphics g) {
         super.paintComponent(g);
         if (menuButton != null) {
             menuButton.setBounds(getWidth() - MENU_BTN_OFFSET_X, MENU_BTN_OFFSET_Y, MENU_BTN_WIDTH, MENU_BTN_HEIGHT);
         }
         g.setColor(Color.GREEN);
         g.fillRect(goal.x, goal.y, goal.width, goal.height);
+
         for (Wall w : mazeWalls) if (w != null) w.draw(g);
-        for (Asteroid a : asteroids) if (a != null) a.draw(g);
-        player.draw(g);
+        for (Rocket r : rockets) if (r != null) r.draw(g); // ציור טילים
+
+        Spaceship.draw(g);
+
         g.setColor(Color.BLACK);
         g.fillRect(0, 0, getWidth(), TOP_BAR_HEIGHT);
         g.setColor(Color.DARK_GRAY);
         g.drawLine(0, TOP_BAR_HEIGHT, getWidth(), TOP_BAR_HEIGHT);
+
         g.setColor(Color.WHITE);
         g.setFont(new Font("Arial", Font.BOLD, FONT_SIZE_MEDIUM));
         g.drawString("Level: " + currentLevel + " | Lives: " + lives + " | Time: " + timeLeft, STATS_TEXT_X, STATS_TEXT_Y);
+
         if (!hasStartedMoving && !isPaused) {
             g.setColor(Color.YELLOW);
             g.setFont(new Font("Arial", Font.BOLD, FONT_SIZE_LARGE));
             String startMsg = isHebrew ? "לחץ על אחד החצים כדי להתחיל!" : "Press any arrow key to start!";
             g.drawString(startMsg, getWidth() / 2 - (isHebrew ? TEXT_OFFSET_HEB : TEXT_OFFSET_ENG), getHeight() / 2);
         }
+
         if (isPaused) {
             g.setColor(Color.YELLOW);
             g.setFont(new Font("Arial", Font.BOLD, FONT_SIZE_PAUSE));
             g.drawString("PAUSED", getWidth() / 2 - TEXT_OFFSET_PAUSE, getHeight() / 2);
         }
     }
+
     private void setupKeyListener() {
         this.addKeyListener(new KeyAdapter() {
             public void keyPressed(KeyEvent e) {
