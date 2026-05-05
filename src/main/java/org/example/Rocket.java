@@ -1,85 +1,44 @@
 package org.example;
 
 import java.awt.*;
-import java.awt.geom.AffineTransform;
 import java.io.IOException;
 import javax.imageio.ImageIO;
 import java.net.URL;
 
-public class Rocket {
-    private static final String IMAGE_PATH = "/rocket.png";
-    private static final Color FALLBACK_COLOR = Color.RED;
-
-    private double x, y;
-    private int width, height, speedX, speedY;
-    private double speed;
-    private double angle = 0;
+public class Rocket extends SpaceObject {
+    private double dx, dy, speed, angle = 0;
     private Image image;
 
     public Rocket(int x, int y, int width, int height, int speedX, int speedY) {
-        this.x = (double) x;
-        this.y = (double) y;
-        this.width = width;
-        this.height = height;
-        this.speedX = speedX;
-        this.speedY = speedY;
-
-        // הטיל מקבל את המהירות מהשלב, במקום מספר קבוע
-        this.speed = speedX;
-
+        super(x, y, width, height, Color.RED);
+        this.dx = x; this.dy = y; this.speed = speedX;
         try {
-            URL imageUrl = getClass().getResource(IMAGE_PATH);
-            if (imageUrl != null) {
-                image = ImageIO.read(imageUrl);
-            }
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
+            URL url = getClass().getResource("/rocket.png");
+            if (url != null) image = ImageIO.read(url);
+        } catch (IOException e) { e.printStackTrace(); }
     }
 
-    public void trackPlayer(int playerX, int playerY) {
-        double diffX = (double) playerX - (this.x + (this.width / 2.0));
-        double diffY = (double) playerY - (this.y + (this.height / 2.0));
-
-        this.angle = Math.atan2(diffY, diffX);
-
-        this.x = this.x + (Math.cos(angle) * speed);
-        this.y = this.y + (Math.sin(angle) * speed);
+    public void trackPlayer(int px, int py) {
+        double diffX = px - (dx + width / 2.0), diffY = py - (dy + height / 2.0);
+        angle = Math.atan2(diffY, diffX);
+        dx += Math.cos(angle) * speed; dy += Math.sin(angle) * speed;
+        this.x = (int) dx; this.y = (int) dy;
     }
 
+    @Override
     public void draw(Graphics g) {
         if (image != null) {
             Graphics2D g2d = (Graphics2D) g.create();
-
-            double centerX = this.x + (this.width / 2.0);
-            double centerY = this.y + (this.height / 2.0);
-
-            g2d.rotate(angle, centerX, centerY);
-            g2d.drawImage(image, (int) this.x, (int) this.y, width, height, null);
-
+            g2d.rotate(angle, dx + width/2.0, dy + height/2.0);
+            g2d.drawImage(image, (int)dx, (int)dy, width, height, null);
             g2d.dispose();
-        } else {
-            g.setColor(FALLBACK_COLOR);
-            g.fillOval((int) this.x, (int) this.y, width, height);
-        }
+        } else { g.setColor(color); g.fillOval((int)dx, (int)dy, width, height); }
     }
 
+    @Override
     public Rectangle getBounds() {
-        // קופסת פגיעה מוקטנת למניעת פסילות שווא מפינות שקופות
-        int shrinkAmount = 40;
-        int hitX = (int) this.x + (shrinkAmount / 2);
-        int hitY = (int) this.y + (shrinkAmount / 2);
-        int hitWidth = width - shrinkAmount;
-        int hitHeight = height - shrinkAmount;
-
-        return new Rectangle(hitX, hitY, hitWidth, hitHeight);
+        // צמצום משמעותי יותר של ה-Hitbox בטיל בגלל הסיבוב
+        int shrink = width * 4 / 10;
+        return new Rectangle((int)dx + shrink/2, (int)dy + shrink/2, width - shrink, height - shrink);
     }
-
-    public int getX() { return (int) x; }
-    public int getY() { return (int) y; }
-    public int getWidth() { return width; }
-    public int getHeight() { return height; }
-
-    public void reverseX() { speedX = -speedX; }
-    public void reverseY() { speedY = -speedY; }
 }

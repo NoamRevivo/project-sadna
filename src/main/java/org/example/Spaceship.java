@@ -7,33 +7,17 @@ import java.net.URL;
 
 public class Spaceship {
     private static final String IMAGE_PATH = "/spaceship 2.png";
-    private static final Color FALLBACK_COLOR = Color.BLUE;
-    private static final int DEFAULT_START_X = 0;
-    private static final int DEFAULT_START_Y = 30;
-
-    private int x, y, width, height;
+    private int x = 5, y = 35, width, height;
     private Image image;
-    private int step = 10;
 
     public Spaceship(int width, int height) {
-        this.x = DEFAULT_START_X;
-        this.y = DEFAULT_START_Y;
         this.width = width;
         this.height = height;
         try {
-            URL imageUrl = getClass().getResource(IMAGE_PATH);
-            if (imageUrl != null) {
-                image = ImageIO.read(imageUrl);
-            }
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
+            URL url = getClass().getResource(IMAGE_PATH);
+            if (url != null) image = ImageIO.read(url);
+        } catch (IOException e) { e.printStackTrace(); }
     }
-
-    public void moveUp() { y -= step; }
-    public void moveDown() { y += step; }
-    public void moveLeft() { x -= step; }
-    public void moveRight() { x += step; }
 
     public int getX() { return x; }
     public void setX(int x) { this.x = x; }
@@ -43,22 +27,13 @@ public class Spaceship {
     public int getHeight() { return height; }
 
     public void draw(Graphics g) {
-        if (image != null) {
-            g.drawImage(image, x, y, width, height, null);
-        } else {
-            g.setColor(FALLBACK_COLOR);
-            g.fillRect(x, y, width, height);
-        }
+        if (image != null) g.drawImage(image, x, y, width, height, null);
+        else { g.setColor(Color.BLUE); g.fillRect(x, y, width, height); }
     }
 
     public Rectangle getBounds() {
-        // קופסת פגיעה מוקטנת לחללית
-        int shrinkAmount = 20;
-        int hitX = x + (shrinkAmount / 2);
-        int hitY = y + (shrinkAmount / 2);
-        int hitWidth = width - shrinkAmount;
-        int hitHeight = height - shrinkAmount;
-
-        return new Rectangle(hitX, hitY, hitWidth, hitHeight);
+        // Hitbox הוגן - 75% מגודל התמונה
+        int shrinkW = width / 4, shrinkH = height / 4;
+        return new Rectangle(x + shrinkW/2, y + shrinkH/2, width - shrinkW, height - shrinkH);
     }
 }
