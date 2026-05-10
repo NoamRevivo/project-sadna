@@ -1,11 +1,9 @@
 package org.example;
-
 import javax.swing.*;
 import java.awt.*;
 import java.net.URL;
 import javax.imageio.ImageIO;
 import java.io.IOException;
-
 public class MenuPanel extends JPanel
 {
     private static final String BACKGROUND_IMAGE_PATH = "/wallpaper 1.png";
@@ -126,7 +124,6 @@ public class MenuPanel extends JPanel
             listener.onModeSelected(res + 1, isHebrew);
         }
     }
-
     private void updateTexts() {
         if (isHebrew) {
             titleLabel.setText(HEB_TITLE);

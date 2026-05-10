@@ -1,7 +1,5 @@
 package org.example;
-
 import java.awt.*;
-
 public abstract class SpaceObject {
     protected int x, y, width, height;
     protected Color color;
