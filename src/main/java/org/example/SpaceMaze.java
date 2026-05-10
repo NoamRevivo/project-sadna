@@ -16,7 +16,6 @@ import java.awt.*;
         game.setOnMenuReturn(() -> {
             cl.show(container, "Menu");
         });
-
         MenuPanel menu = new MenuPanel((mode, isHebrew) -> {
             game.setGameMode(mode);
             game.setHebrew(isHebrew); // מעביר את בחירת השפה למשחק
