@@ -32,5 +32,7 @@ import java.awt.*;
     }
     public static void main(String[] args) {
         SwingUtilities.invokeLater(SpaceMaze::new);
+        //המטרה היא לוודא שהפעלת המשחק ויצירת החלון מתבצעות ב"נתיב" הנכון
+        // והבטוח ביותר עבור ממשק המשתמש.
     }
 }

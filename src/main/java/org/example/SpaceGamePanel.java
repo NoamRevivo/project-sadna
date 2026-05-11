@@ -3,7 +3,6 @@ import javax.swing.*;
 import java.awt.*;
 import java.awt.event.*;
 import java.util.Random;
-// מחלקה המייצגת את לוח המשחק ומריצה את לולאת המשחק בתהלוכון נפרד (Runnable)
 public class SpaceGamePanel extends JPanel implements Runnable
 {
     private static final int DEFAULT_WIDTH = 800;
@@ -67,8 +66,7 @@ public class SpaceGamePanel extends JPanel implements Runnable
         setupMenuButton();
         setupKeyListener();
     }
-    // יוצר ומגדיר את כפתור החזרה לתפריט הראשי
-    private void setupMenuButton()
+    private void setupMenuButton()// יוצר ומגדיר את כפתור החזרה לתפריט הראשי
     {
         menuButton = new JButton();
         menuButton.setFont(new Font("Arial", Font.BOLD, 14));
@@ -94,16 +92,14 @@ public class SpaceGamePanel extends JPanel implements Runnable
         }
     }
     public void setOnMenuReturn(Runnable onMenuReturn) { this.onMenuReturn = onMenuReturn; }
-    // מאתחל את השלב: בונה חללית, יעד, חומות וטילים לפי רמת הקושי, ומאפס משתנים
-    private void initLevel(int level)
+    private void initLevel(int level)// מאתחל את השלב: בונה חללית, יעד, חומות וטילים לפי רמת הקושי, ומאפס משתנים
     {
         int w = getWidth() > 0 ? getWidth() : DEFAULT_WIDTH;
         int h = getHeight() > 0 ? getHeight() : DEFAULT_HEIGHT;
         spaceship = new Spaceship(PLAYER_START_WIDTH, PLAYER_START_HEIGHT);
         goal = new Rectangle(w - GOAL_OFFSET_X, h - GOAL_OFFSET_Y, GOAL_WIDTH, GOAL_HEIGHT);
         Random rand = new Random();
-        // יצירת מבוך חומות דינמי
-        int wallCount = WALL_BASE_COUNT + (level / WALL_LEVEL_DIVISOR);
+        int wallCount = WALL_BASE_COUNT + (level / WALL_LEVEL_DIVISOR);// יצירת מבוך חומות דינמי
         mazeWalls = new Wall[wallCount * WALLS_PER_SEGMENT];
         if (level % 2 != 0) {
             int segment = (w - 200) / wallCount;
@@ -181,7 +177,7 @@ public class SpaceGamePanel extends JPanel implements Runnable
             try { Thread.sleep(16); } catch (InterruptedException e) { e.printStackTrace(); } // כ-60 FPS
         }
     }
-    // הלב של המשחק: מעדכן מיקומים, בודק התנגשויות ומנהל טיימר
+    // הלב של המשחק: מעדכנת מיקומים, בודק התנגשויות ומנהל טיימר
     private void update() {
         if (!hasStartedMoving) {
             if (up || down || left || right) {
@@ -299,20 +295,30 @@ public class SpaceGamePanel extends JPanel implements Runnable
                 rockets[i].draw(g);
             }
         }
-        // ציור חללית
-        spaceship.draw(g);
-        // ציור הבר העליון עם נתוני המשחק (חיים, זמן, רמה)
-        g.setColor(Color.BLACK);
+        spaceship.draw(g);// ציור חללית
+        g.setColor(Color.BLACK);// ציור הבר העליון עם נתוני המשחק (חיים, זמן, רמה)
         g.fillRect(0, 0, getWidth(), TOP_BAR_HEIGHT);
         g.setColor(Color.WHITE);
         g.setFont(new Font("Arial", Font.BOLD, FONT_SIZE_MEDIUM));
-        g.drawString("Level: " + currentLevel + " | Lives: " + lives + " | Time: " + timeLeft, STATS_TEXT_X, STATS_TEXT_Y);
-        // הודעת התחלה אם השחקן טרם זז
-        if (!hasStartedMoving && !isPaused) {
+        g.drawString("Level: " + currentLevel +
+                " | Lives: " + lives + " | Time: " + timeLeft, STATS_TEXT_X, STATS_TEXT_Y);
+        // בדיקה אם המשחק מושהה - הצגת הודעה מתאימה
+        if (isPaused) {
+            g.setColor(new Color(0, 0, 0, 150)); // רקע כהה שקוף להדגשת ההודעה
+            g.fillRect(0, TOP_BAR_HEIGHT, getWidth(), getHeight() - TOP_BAR_HEIGHT);
+            g.setColor(Color.ORANGE);
+            g.setFont(new Font("Arial", Font.BOLD, FONT_SIZE_LARGE));
+            String pauseMsg = isHebrew ? "המשחק מושהה. לחץ שוב על P כדי להמשיך" : "Game Paused. Press P to resume";
+            int msgWidth = g.getFontMetrics().stringWidth(pauseMsg);
+            g.drawString(pauseMsg, (getWidth() - msgWidth) / 2, getHeight() / 2); // ציור הודעת השהייה במרכז
+        }
+        // הודעת התחלה אם השחקן טרם זז (ורק אם המשחק לא ב-Pause)
+        else if (!hasStartedMoving) {
             g.setColor(Color.YELLOW);
             g.setFont(new Font("Arial", Font.BOLD, FONT_SIZE_LARGE));
             String msg = isHebrew ? "לחץ על אחד מלחצני החצים כדי להתחיל!" : "Press one of the arrow keys to get started!";
-            g.drawString(msg, getWidth() / 2 - 150, getHeight() / 2);
+            int msgWidth = g.getFontMetrics().stringWidth(msg);
+            g.drawString(msg, (getWidth() - msgWidth) / 2, getHeight() / 2); // ציור הודעת התחלה במרכז
         }
     }
     // מגדיר האזנה למקלדת כדי לזהות לחיצות על החיצים לתנועה ומקש P להשהיה
