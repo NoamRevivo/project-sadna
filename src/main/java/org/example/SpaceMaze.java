@@ -3,10 +3,12 @@ import javax.swing.*;
 import java.awt.*;
     public class SpaceMaze extends JFrame
     {
+        private static final int WIDTH = 800;
+        private static final int HEIGT = 600;
         public SpaceMaze() {
         this.setTitle("Space Maze - Final Project");
         this.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        this.setSize(800, 600);
+        this.setSize(WIDTH,HEIGT);
         this.setExtendedState(JFrame.MAXIMIZED_BOTH);
         this.setResizable(true);
         this.setLocationRelativeTo(null);

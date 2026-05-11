@@ -15,7 +15,8 @@ public class Spaceship
         try {
             URL url = getClass().getResource(IMAGE_PATH);
             if (url != null) image = ImageIO.read(url);
-        } catch (IOException e) { e.printStackTrace(); }
+        }
+        catch (IOException e) { e.printStackTrace(); }
     }
     public int getX() { return x; }
     public void setX(int x) { this.x = x; }

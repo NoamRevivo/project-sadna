@@ -311,7 +311,7 @@ public class SpaceGamePanel extends JPanel implements Runnable
         if (!hasStartedMoving && !isPaused) {
             g.setColor(Color.YELLOW);
             g.setFont(new Font("Arial", Font.BOLD, FONT_SIZE_LARGE));
-            String msg = isHebrew ? "לחץ על החצים כדי להתחיל!" : "Press arrows to start!";
+            String msg = isHebrew ? "לחץ על אחד מלחצני החצים כדי להתחיל!" : "Press one of the arrow keys to get started!";
             g.drawString(msg, getWidth() / 2 - 150, getHeight() / 2);
         }
     }
