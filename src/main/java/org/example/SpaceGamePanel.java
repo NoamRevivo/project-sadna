@@ -1,48 +1,43 @@
 package org.example;
+
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.*;
 import java.util.Random;
-public class SpaceGamePanel extends JPanel implements Runnable
-{
+
+public class SpaceGamePanel extends JPanel implements Runnable {
     private static final int DEFAULT_WIDTH = 800;
     private static final int DEFAULT_HEIGHT = 600;
     private static final int TOP_BAR_HEIGHT = 30;
-    // הגדרות שחקן
     private static final int PLAYER_START_WIDTH = 45;
     private static final int PLAYER_START_HEIGHT = 55;
     private static final int PLAYER_SPEED = 5;
     private static final int STARTING_LIVES = 3;
-    // הגדרות יעד
     private static final int GOAL_WIDTH = 40;
     private static final int GOAL_HEIGHT = 40;
     private static final int GOAL_OFFSET_X = 70;
     private static final int GOAL_OFFSET_Y = 90;
-    // הגדרות שלבים ומצבים
     private static final int MAX_LEVEL = 50;
     private static final int STARTING_LEVEL = 1;
     private static final int MODE_NORMAL = 1;
     private static final int MODE_RANDOM = 2;
     private static final int MODE_MANUAL = 3;
-    // הגדרות חומות (קירות)
     private static final int WALL_THICKNESS = 25;
     private static final int WALL_BASE_COUNT = 2;
     private static final int WALL_LEVEL_DIVISOR = 12;
     private static final int WALL_GAP_BASE = 110;
     private static final int WALL_GAP_RANDOM_ADD = 100;
     private static final int WALLS_PER_SEGMENT = 2;
-    // הגדרות טילים
     private static final int ROCKET_BASE_COUNT = 1;
     private static final int ROCKET_LEVEL_DIVISOR = 20;
     private static final int ROCKET_SIZE = 85;
     private static final int ROCKET_BASE_SPEED = 1;
     private static final int ROCKET_SPEED_DIVISOR = 20;
-    // הגדרות טקסט
     private static final int FONT_SIZE_MEDIUM = 16;
     private static final int FONT_SIZE_LARGE = 24;
     private static final int STATS_TEXT_X = 20;
     private static final int STATS_TEXT_Y = 21;
-    //שדות המחלקה
+
     private Spaceship spaceship;
     private Wall[] mazeWalls;
     private Rocket[] rockets;
@@ -57,49 +52,51 @@ public class SpaceGamePanel extends JPanel implements Runnable
     private boolean isHebrew = true;
     private Runnable onMenuReturn;
     private JButton menuButton;
-    // בנאי: מגדיר את הלוח, מאפשר קבלת מיקוד למקלדת, ומאתחל כפתורים והאזנה למקשים
-    public SpaceGamePanel()
-    {
+
+    // בנאי לוח המשחק; מגדיר הגדרות תצוגה ראשוניות, מפעיל את כפתור התפריט העליון ומאתחל את ההאזנה לקליטת מקשים.
+    public SpaceGamePanel() {
         this.setBackground(Color.BLACK);
-        this.setFocusable(true); // קריטי כדי שהחיצים יעבדו
+        this.setFocusable(true);
         this.setLayout(null);
         setupMenuButton();
         setupKeyListener();
     }
-    private void setupMenuButton()// יוצר ומגדיר את כפתור החזרה לתפריט הראשי
-    {
+
+    // מגדירה ומעצבת את כפתור החזרה לתפריט הראשי, ודואגת שלא יגנוב את הפוקוס הגרפי מהמקלדת.
+    private void setupMenuButton() {
         menuButton = new JButton();
         menuButton.setFont(new Font("Arial", Font.BOLD, 14));
         menuButton.setBackground(Color.DARK_GRAY);
         menuButton.setForeground(Color.WHITE);
-        menuButton.setFocusable(false); // מונע מהכפתור "לגנוב" את הפוקוס מהמקלדת
+        menuButton.setFocusable(false);
         menuButton.addActionListener(e -> {
             isRunning = false;
-            if (onMenuReturn != null) {
-                onMenuReturn.run();
-            }
+            if (onMenuReturn != null) onMenuReturn.run();
         });
         this.add(menuButton);
     }
-    // מתודות הגדרה (Setters) למצב המשחק, שפה ופעולת חזרה לתפריט
+
+    // קובעת את מצב המשחק הנבחר (רגיל, אקראי, ידני).
     public void setGameMode(int mode) { this.gameMode = mode; }
+
+    // מעדכנת את שפת ממשק המשחק ומשנה בהתאם את הכיתוב על כפתור החזרה.
     public void setHebrew(boolean isHebrew) {
         this.isHebrew = isHebrew;
-        if (isHebrew) {
-            menuButton.setText("תפריט ראשי");
-        } else {
-            menuButton.setText("Main Menu");
-        }
+        menuButton.setText(isHebrew ? "תפריט ראשי" : "Main Menu");
     }
+
+    // מגדירה את פונקציית ה-Callback שתתבצע בעת לחיצה על כפתור החזרה לתפריט.
     public void setOnMenuReturn(Runnable onMenuReturn) { this.onMenuReturn = onMenuReturn; }
-    private void initLevel(int level)// מאתחל את השלב: בונה חללית, יעד, חומות וטילים לפי רמת הקושי, ומאפס משתנים
-    {
+
+    // בונה ומאתחלת מחדש את רכיבי השלב (חללית, יעד, חומות וטילים) על בסיס רמת הקושי והשלב הנוכחי.
+    private void initLevel(int level) {
         int w = getWidth() > 0 ? getWidth() : DEFAULT_WIDTH;
         int h = getHeight() > 0 ? getHeight() : DEFAULT_HEIGHT;
         spaceship = new Spaceship(PLAYER_START_WIDTH, PLAYER_START_HEIGHT);
         goal = new Rectangle(w - GOAL_OFFSET_X, h - GOAL_OFFSET_Y, GOAL_WIDTH, GOAL_HEIGHT);
         Random rand = new Random();
-        int wallCount = WALL_BASE_COUNT + (level / WALL_LEVEL_DIVISOR);// יצירת מבוך חומות דינמי
+
+        int wallCount = WALL_BASE_COUNT + (level / WALL_LEVEL_DIVISOR);
         mazeWalls = new Wall[wallCount * WALLS_PER_SEGMENT];
         if (level % 2 != 0) {
             int segment = (w - 200) / wallCount;
@@ -110,8 +107,7 @@ public class SpaceGamePanel extends JPanel implements Runnable
                 mazeWalls[i * 2] = new Wall(x, 0, WALL_THICKNESS, gapY);
                 mazeWalls[i * 2 + 1] = new Wall(x, gapY + gap, WALL_THICKNESS, Math.max(h, 2000));
             }
-        }
-        else {
+        } else {
             int segment = (h - 150) / wallCount;
             for (int i = 0; i < wallCount; i++) {
                 int y = 140 + (i * segment);
@@ -121,7 +117,7 @@ public class SpaceGamePanel extends JPanel implements Runnable
                 mazeWalls[i * 2 + 1] = new Wall(gapX + gap, y, Math.max(w, 2000), WALL_THICKNESS);
             }
         }
-        // יצירת טילים (אויבים) בהתאם לשלב
+
         int rocketCount = ROCKET_BASE_COUNT + (level / ROCKET_LEVEL_DIVISOR);
         rockets = new Rocket[rocketCount];
         for (int i = 0; i < rocketCount; i++) {
@@ -132,12 +128,13 @@ public class SpaceGamePanel extends JPanel implements Runnable
                     ROCKET_SIZE, ROCKET_SIZE, speed, speed
             );
         }
-        timeLeft = 15 + (level * 45 / 50); // חישוב זמן לשלב
+        timeLeft = 15 + (level * 45 / 50);
         up = down = left = right = false;
         hasStartedMoving = false;
         frameCounter = 0;
     }
-    // מתחיל את המשחק: קובע את השלב ההתחלתי ומפעיל את תהלוכון המשחק (Thread)
+
+    // קובעת את שלב ההתחלה לפי מצב המשחק ומפעילה לראשונה את ה-Thread המנהל את לולאת המשחק הראשי.
     public void startGame() {
         if (gameMode == MODE_NORMAL) {
             currentLevel = STARTING_LEVEL;
@@ -148,80 +145,58 @@ public class SpaceGamePanel extends JPanel implements Runnable
             String title = isHebrew ? "בחירת שלב ידנית" : "Manual Level Selection";
             String val = (String) JOptionPane.showInputDialog(null, msg, title, JOptionPane.QUESTION_MESSAGE, null, null, null);
             try {
-                if (val != null && !val.trim().isEmpty()) {
-                    currentLevel = Math.max(1, Math.min(50, Integer.parseInt(val)));
-                } else {
-                    currentLevel = 1;
-                }
-            } catch (NumberFormatException e) {
-                currentLevel = 1;
-            }
+                currentLevel = (val != null && !val.trim().isEmpty()) ? Math.max(1, Math.min(50, Integer.parseInt(val))) : 1;
+            } catch (NumberFormatException e) { currentLevel = 1; }
         }
         lives = STARTING_LIVES;
         initLevel(currentLevel);
-        // הפעלת לולאת המשחק
+
         if (gameThread == null || !isRunning) {
             isRunning = true;
             gameThread = new Thread(this);
             gameThread.start();
         }
     }
-    // לולאת המשחק המרכזית (Game Loop): מעדכנת ומציירת מחדש באופן רציף
+
+    // מתודת ריצת הלולאה הראשית (Game Loop); דואגת לעדכן פיזיקה ולצייר את המסך מחדש כ-60 פעמים בשנייה קבועות (60 FPS).
     @Override
     public void run() {
         while (isRunning) {
-            if (!isPaused) {
-                update(); // עדכון לוגיקה
-            }
-            repaint(); // ציור מחדש
-            try { Thread.sleep(16); } catch (InterruptedException e) { e.printStackTrace(); } // כ-60 FPS
+            if (!isPaused) update();
+            repaint();
+            try { Thread.sleep(16); } catch (InterruptedException e) { e.printStackTrace(); }
         }
     }
-    // הלב של המשחק: מעדכנת מיקומים, בודק התנגשויות ומנהל טיימר
+
+    // מנוע המשחק המרכזי; מחשב את תנועת החללית, מבצע החלקה ובדיקת התנגשות קירות (בנפרד לציר X ו-Y), מזיז טילים ומנהל את שעון הזמן.
     private void update() {
-        if (!hasStartedMoving) {
-            if (up || down || left || right) {
-                hasStartedMoving = true;
-            }
-        }
+        if (!hasStartedMoving && (up || down || left || right)) hasStartedMoving = true;
+
         int nx = spaceship.getX();
         int ny = spaceship.getY();
         if (up) ny -= PLAYER_SPEED;
         if (down) ny += PLAYER_SPEED;
         if (left) nx -= PLAYER_SPEED;
         if (right) nx += PLAYER_SPEED;
-        // בדיקת התנגשות נפרדת לציר X למניעת תקיעה בפינות (Wall Sliding)
+
         Rectangle nextX = new Rectangle(nx, spaceship.getY(), spaceship.getWidth(), spaceship.getHeight());
         boolean hitWallX = false;
-        for (int i = 0; i < mazeWalls.length; i++) {
-            Wall w = mazeWalls[i];
-            if (w != null && nextX.intersects(w.getBounds())) {
-                hitWallX = true;
-                break;
-            }
+        for (Wall w : mazeWalls) {
+            if (w != null && nextX.intersects(w.getBounds())) { hitWallX = true; break; }
         }
-        if (!hitWallX) {
-            spaceship.setX(Math.max(0, Math.min(getWidth() - spaceship.getWidth(), nx)));
-        }
-        // בדיקת התנגשות נפרדת לציר Y
+        if (!hitWallX) spaceship.setX(Math.max(0, Math.min(getWidth() - spaceship.getWidth(), nx)));
+
         Rectangle nextY = new Rectangle(spaceship.getX(), ny, spaceship.getWidth(), spaceship.getHeight());
         boolean hitWallY = false;
-        for (int i = 0; i < mazeWalls.length; i++) {
-            Wall w = mazeWalls[i];
-            if (w != null && nextY.intersects(w.getBounds())) {
-                hitWallY = true;
-                break;
-            }
+        for (Wall w : mazeWalls) {
+            if (w != null && nextY.intersects(w.getBounds())) { hitWallY = true; break; }
         }
-        if (!hitWallY) {
-            spaceship.setY(Math.max(TOP_BAR_HEIGHT, Math.min(getHeight() - spaceship.getHeight(), ny)));
-        }
-        // עדכון טילים וטיימר (רק אם השחקן התחיל לזוז)
+        if (!hitWallY) spaceship.setY(Math.max(TOP_BAR_HEIGHT, Math.min(getHeight() - spaceship.getHeight(), ny)));
+
         if (hasStartedMoving) {
-            for (int i = 0; i < rockets.length; i++) {
-                Rocket r = rockets[i];
+            for (Rocket r : rockets) {
                 if (r != null) {
-                    r.trackPlayer(spaceship.getX(), spaceship.getY()); // הטילים עוקבים אחרי השחקן
+                    r.trackPlayer(spaceship.getX(), spaceship.getY());
                     if (spaceship.getBounds().intersects(r.getBounds())) {
                         handleDeath(isHebrew ? "נפגעת מטיל!" : "Hit by a rocket!");
                         return;
@@ -229,15 +204,13 @@ public class SpaceGamePanel extends JPanel implements Runnable
                 }
             }
             frameCounter++;
-            if (frameCounter >= 60) { // כל 60 פריימים = שנייה אחת
+            if (frameCounter >= 60) {
                 timeLeft--;
                 frameCounter = 0;
-                if (timeLeft <= 0) {
-                    handleDeath(isHebrew ? "נגמר הזמן!" : "Time's up!");
-                }
+                if (timeLeft <= 0) { handleDeath(isHebrew ? "נגמר הזמן!" : "Time's up!"); }
             }
         }
-        // בדיקת הגעה ליעד
+
         if (spaceship.getBounds().intersects(goal)) {
             if (currentLevel < MAX_LEVEL) {
                 currentLevel++;
@@ -247,7 +220,8 @@ public class SpaceGamePanel extends JPanel implements Runnable
             }
         }
     }
-    // מטפל בפסילה: מוריד חיים, מציג הודעה ומתחיל את השלב מחדש או מסיים את המשחק
+
+    // מטפלת במקרי פסילת השחקן; מורידה חיים ומחליטה אם לאתחל את השלב מחדש או לעצור ולהציג מסך הפסד.
     private void handleDeath(String reason) {
         lives--;
         up = down = left = right = false;
@@ -258,78 +232,59 @@ public class SpaceGamePanel extends JPanel implements Runnable
             initLevel(currentLevel);
         }
     }
-    // מציג תפריט סיום משחק (ניצחון/הפסד) עם אפשרות יציאה או חזרה לתפריט
+
+    // מציגה חלון הודעה סופי עם סיום המשחק (ניצחון או הפסד טוטאלי) המאפשר לשחקן לחזור לתפריט או לצאת.
     private void showEndGameMenu(String message, String title) {
         Object[] options = isHebrew ? new Object[]{"תפריט", "יציאה"} : new Object[]{"Menu", "Exit"};
         int choice = JOptionPane.showOptionDialog(null, message, title, JOptionPane.YES_NO_OPTION, JOptionPane.INFORMATION_MESSAGE, null, options, options[0]);
         if (choice == 0) {
             isRunning = false;
-            if (onMenuReturn != null) {
-                onMenuReturn.run();
-            }
-        } else {
-            System.exit(0);
-        }
+            if (onMenuReturn != null) onMenuReturn.run();
+        } else { System.exit(0); }
     }
-    // מצייר את כל האלמנטים על המסך: יעד, חומות, טילים, חללית וטקסט סטטוס
+
+    // אחראית על הציור והרינדור של כל רכיבי השלב על המסך (חומות, יעד, חללית, טילים), כולל תצוגת נתוני השעון ומסכי ההשהיה.
     @Override
     protected void paintComponent(Graphics g) {
         super.paintComponent(g);
-        // בדיקה שהאובייקטים אותחלו לפני הציור למניעת שגיאות
-        if (goal == null || spaceship == null) {
-            return;
-        }
+        if (goal == null || spaceship == null) return;
+
         menuButton.setBounds(getWidth() - 140, 2, 120, 26);
-        // ציור היעד
         g.setColor(Color.GREEN);
         g.fillRect(goal.x, goal.y, goal.width, goal.height);
-        // ציור חומות
-        for (int i = 0; i < mazeWalls.length; i++) {
-            if (mazeWalls[i] != null) {
-                mazeWalls[i].draw(g);
-            }
-        }
-        // ציור טילים
-        for (int i = 0; i < rockets.length; i++) {
-            if (rockets[i] != null) {
-                rockets[i].draw(g);
-            }
-        }
-        spaceship.draw(g);// ציור חללית
-        g.setColor(Color.BLACK);// ציור הבר העליון עם נתוני המשחק (חיים, זמן, רמה)
+
+        for (Wall w : mazeWalls) { if (w != null) w.draw(g); }
+        for (Rocket r : rockets) { if (r != null) r.draw(g); }
+        spaceship.draw(g);
+
+        g.setColor(Color.BLACK);
         g.fillRect(0, 0, getWidth(), TOP_BAR_HEIGHT);
         g.setColor(Color.WHITE);
         g.setFont(new Font("Arial", Font.BOLD, FONT_SIZE_MEDIUM));
-        g.drawString("Level: " + currentLevel +
-                " | Lives: " + lives + " | Time: " + timeLeft, STATS_TEXT_X, STATS_TEXT_Y);
-        // בדיקה אם המשחק מושהה - הצגת הודעה מתאימה
+        g.drawString("Level: " + currentLevel + " | Lives: " + lives + " | Time: " + timeLeft, STATS_TEXT_X, STATS_TEXT_Y);
+
         if (isPaused) {
-            g.setColor(new Color(0, 0, 0, 150)); // רקע כהה שקוף להדגשת ההודעה
+            g.setColor(new Color(0, 0, 0, 150));
             g.fillRect(0, TOP_BAR_HEIGHT, getWidth(), getHeight() - TOP_BAR_HEIGHT);
             g.setColor(Color.ORANGE);
             g.setFont(new Font("Arial", Font.BOLD, FONT_SIZE_LARGE));
             String pauseMsg = isHebrew ? "המשחק מושהה. לחץ שוב על P כדי להמשיך" : "Game Paused. Press P to resume";
-            int msgWidth = g.getFontMetrics().stringWidth(pauseMsg);
-            g.drawString(pauseMsg, (getWidth() - msgWidth) / 2, getHeight() / 2); // ציור הודעת השהייה במרכז
-        }
-        // הודעת התחלה אם השחקן טרם זז (ורק אם המשחק לא ב-Pause)
-        else if (!hasStartedMoving) {
+            g.drawString(pauseMsg, (getWidth() - g.getFontMetrics().stringWidth(pauseMsg)) / 2, getHeight() / 2);
+        } else if (!hasStartedMoving) {
             g.setColor(Color.YELLOW);
             g.setFont(new Font("Arial", Font.BOLD, FONT_SIZE_LARGE));
             String msg = isHebrew ? "לחץ על אחד מלחצני החצים כדי להתחיל!" : "Press one of the arrow keys to get started!";
-            int msgWidth = g.getFontMetrics().stringWidth(msg);
-            g.drawString(msg, (getWidth() - msgWidth) / 2, getHeight() / 2); // ציור הודעת התחלה במרכז
+            g.drawString(msg, (getWidth() - g.getFontMetrics().stringWidth(msg)) / 2, getHeight() / 2);
         }
     }
-    // מגדיר האזנה למקלדת כדי לזהות לחיצות על החיצים לתנועה ומקש P להשהיה
+
+    // מגדירה מאזין קלט מקלדת עצמאי שמזהה לחיצות חצים לצורך ניווט החללית ומקש P לשינוי סטטוס השהיית המשחק.
     private void setupKeyListener() {
         this.addKeyListener(new KeyAdapter() {
             @Override
             public void keyPressed(KeyEvent e) {
                 int c = e.getKeyCode();
-                if (c == KeyEvent.VK_P) { // השהיית המשחק
-                    isPaused = !isPaused;
-                }
+                if (c == KeyEvent.VK_P) isPaused = !isPaused;
                 if (!isPaused) {
                     if (c == KeyEvent.VK_UP) up = true;
                     if (c == KeyEvent.VK_DOWN) down = true;
